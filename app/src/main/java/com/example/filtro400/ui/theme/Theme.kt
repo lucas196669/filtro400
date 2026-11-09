@@ -9,6 +9,8 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
@@ -33,6 +35,8 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+val LocalColorExito = staticCompositionLocalOf { VerdeExitoClaro }
+
 @Composable
 fun Filtro400Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -50,9 +54,14 @@ fun Filtro400Theme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalColorExito provides if (darkTheme) VerdeExitoOscuro else VerdeExitoClaro
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = FormasApp,
+            content = content
+        )
+    }
 }
