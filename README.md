@@ -85,31 +85,44 @@ Hay 32 tests que comprueban, entre otras cosas:
 
 ## Preguntas de reflexión
 
-<!-- TODO: copiar aquí el enunciado de las 6 preguntas del reto -->
+### 1. ¿Cómo se entera la app de que entra una llamada?
 
-### 1. (Pregunta 1 del reto)
+Android tiene un servicio del sistema llamado `CallScreeningService`. Cuando entra una llamada, el sistema llama al método `onScreenCall()` de mi `FiltroLlamadasService` antes de que el teléfono suene, y me pasa los datos de la llamada (`Call.Details`): el número, si es entrante o saliente y, en Android 11 o superior, si el operador ha verificado el número. Con eso decido qué hacer y se lo contesto al sistema con `respondToCall()`: dejarla pasar o rechazarla.
 
-Mi respuesta: (escribir aquí con mis palabras)
+### 2. ¿Por qué hace falta el rol de filtrado de llamadas?
 
-### 2. (Pregunta 2 del reto)
+Porque una app que filtra llamadas ve quién te llama y puede cortar llamadas, y eso es delicado para la privacidad. Android no deja que una app se dé ese poder a sí misma: con `RoleManager.createRequestRoleIntent(ROLE_CALL_SCREENING)` se abre un diálogo del sistema y es el usuario quien tiene que aceptarlo. Sin el rol, aunque el servicio esté declarado en el manifest, Android no se lo pasa y la app no hace nada.
 
-Mi respuesta: (escribir aquí con mis palabras)
+### 3. ¿Hace falta un servidor o internet?
 
-### 3. (Pregunta 3 del reto)
+No. La decisión se toma dentro del móvil con el número que entrega el sistema. Los prefijos están en SQLite, los ajustes en `SharedPreferences` y la regla es código normal de Kotlin. Lo único que usa la red del operador es el SMS automático, pero no hay ningún servidor mío por detrás.
 
-Mi respuesta: (escribir aquí con mis palabras)
+### 4. ¿Qué pasa con los contactos?
 
-### 4. (Pregunta 4 del reto)
+Según la documentación de Android, `CallScreeningService` se usa para llamadas de números que no están en la agenda del usuario, así que los contactos no pasan por el filtro. Esto es una limitación: aunque un contacto tenga un número que empiece por 400, la llamada no se rechaza. También significa que "bloquear todas las llamadas desconocidas" solo afecta a números que no son contactos.
 
-Mi respuesta: (escribir aquí con mis palabras)
+### 5. ¿Qué diferencia hay entre que la función funcione y que el bloqueo funcione de verdad?
 
-### 5. (Pregunta 5 del reto)
+`debeBloquearse()` y `decidir()` son lógica pura: reciben un texto y devuelven una decisión. Por eso se pueden probar con tests unitarios sin emulador, y mis 32 tests en verde demuestran que la regla es correcta. Pero eso no prueba que se bloquee una llamada real, porque eso depende de más cosas:
 
-Mi respuesta: (escribir aquí con mis palabras)
+- que el usuario haya concedido el rol,
+- que el servicio esté registrado en el manifest con `BIND_SCREENING_SERVICE`,
+- que la app responda a tiempo, porque Android espera pocos segundos,
+- que el número llegue en un formato que entienda (`+34`, `0034`, espacios...) y que no llegue oculto o vacío,
+- que el número no esté en la agenda,
+- la versión de Android (la verificación del número solo existe desde la API 30).
 
-### 6. (Pregunta 6 del reto)
+Por eso, además de los tests, hice la prueba con llamadas simuladas en el emulador y comprobé la decisión en Logcat y en la pestaña *Registro*.
 
-Mi respuesta: (escribir aquí con mis palabras)
+### 6. ¿Qué mejorarías?
+
+- Quitar o recortar el `Log.d` que escribe el número de teléfono, porque es un dato personal.
+- Normalizar también prefijos de otros países, no solo `+34` y `0034`.
+- Añadir una lista de números spam conocidos o conectarla a una base de datos de spam.
+- Usar `ViewModel` y Room si la app crece.
+- Hacer tests instrumentados de `BaseDatosFiltros`, porque ahora solo hay tests de `ReglaBloqueo`.
+- Poder exportar el registro de llamadas bloqueadas.
+- Explicar dentro de la app que los contactos no se filtran.
 
 ## Posibles mejoras
 
