@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +28,7 @@ import com.example.filtro400.BaseDatosFiltros
 import com.example.filtro400.LlamadaBloqueada
 import com.example.filtro400.ReglaBloqueo
 import com.example.filtro400.ui.theme.Espaciado
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -41,6 +43,15 @@ fun PantallaRegistro(
     onMensaje: (String) -> Unit = {}
 ) {
     var llamadas by remember { mutableStateOf(baseDatos.ultimasLlamadas(50)) }
+
+    // Mientras la pantalla está abierta, volvemos a leer el historial cada
+    // segundo: así una llamada bloqueada aparece sin cambiar de pestaña.
+    LaunchedEffect(Unit) {
+        while (true) {
+            llamadas = baseDatos.ultimasLlamadas(50)
+            delay(1000)
+        }
+    }
     var confirmarBorrado by remember { mutableStateOf(false) }
 
     ContenidoRegistro(
@@ -85,7 +96,7 @@ internal fun ContenidoRegistro(
                 icono = Icons.Filled.Call,
                 titulo = "Todavía no hay llamadas bloqueadas",
                 texto = "Cuando el filtro rechace una llamada, aparecerá aquí agrupada por " +
-                    "día con su hora y su motivo."
+                        "día con su hora y su motivo."
             )
         } else {
             val hoy = LocalDate.now()

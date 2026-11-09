@@ -21,7 +21,7 @@ data class LlamadaBloqueada(
 // SQLiteOpenHelper nos crea y abre la base de datos por nosotros.
 // Usamos SQLite puro (sin Room) para no añadir dependencias.
 class BaseDatosFiltros private constructor(context: Context) :
-    SQLiteOpenHelper(context.applicationContext, "filtros.db", null, 2) {
+    SQLiteOpenHelper(context.applicationContext, "filtros.db", null, 3) {
 
     companion object {
         private const val NOMBRE_TABLA = "filtros"
@@ -44,33 +44,35 @@ class BaseDatosFiltros private constructor(context: Context) :
         // Cada prefijo es único para no guardar duplicados.
         db.execSQL(
             "CREATE TABLE $NOMBRE_TABLA (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "prefijo TEXT NOT NULL UNIQUE, " +
-                "activo INTEGER NOT NULL DEFAULT 1)"
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "prefijo TEXT NOT NULL UNIQUE, " +
+                    "activo INTEGER NOT NULL DEFAULT 1)"
         )
         // Empezamos con el "400" de la Fase 1, ya activado.
         db.execSQL("INSERT INTO $NOMBRE_TABLA (prefijo, activo) VALUES ('400', 1)")
 
         // Tabla nueva de la Fase 3: historial de llamadas bloqueadas.
-        db.execSQL(
-            "CREATE TABLE IF NOT EXISTS $NOMBRE_REGISTRO (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "numero TEXT NOT NULL, " +
-                "motivo TEXT NOT NULL, " +
-                "fecha INTEGER NOT NULL)"
-        )
+        crearTablaRegistro(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, versionAnterior: Int, versionNueva: Int) {
-        // IMPORTANTE: no borramos "filtros"; solo añadimos lo nuevo.
-        if (versionAnterior < 2) {
-            db.execSQL(
-                "CREATE TABLE IF NOT EXISTS $NOMBRE_REGISTRO (" +
+    // La tabla del historial se crea siempre con las mismas columnas.
+    private fun crearTablaRegistro(db: SQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS $NOMBRE_REGISTRO (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "numero TEXT NOT NULL, " +
                     "motivo TEXT NOT NULL, " +
                     "fecha INTEGER NOT NULL)"
-            )
+        )
+    }
+
+    override fun onUpgrade(db: SQLiteDatabase, versionAnterior: Int, versionNueva: Int) {
+        // IMPORTANTE: nunca borramos "filtros": son los prefijos del usuario.
+        // Hasta la versión 2 la tabla "registro" pudo crearse sin la columna
+        // "motivo". Como solo es un historial, la volvemos a crear bien.
+        if (versionAnterior < 3) {
+            db.execSQL("DROP TABLE IF EXISTS $NOMBRE_REGISTRO")
+            crearTablaRegistro(db)
         }
     }
 
@@ -174,7 +176,7 @@ class BaseDatosFiltros private constructor(context: Context) :
         // Borramos las más antiguas para no crecer sin límite.
         writableDatabase.execSQL(
             "DELETE FROM $NOMBRE_REGISTRO WHERE id NOT IN " +
-                "(SELECT id FROM $NOMBRE_REGISTRO ORDER BY fecha DESC, id DESC LIMIT 200)"
+                    "(SELECT id FROM $NOMBRE_REGISTRO ORDER BY fecha DESC, id DESC LIMIT 200)"
         )
     }
 
